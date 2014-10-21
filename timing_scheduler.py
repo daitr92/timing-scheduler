@@ -36,6 +36,9 @@ from nova.scheduler import utils as scheduler_utils
 
 from crontab import CronTab
 import datetime
+import pdb
+from syslog import LOG_MASK
+from time import strptime
 
 
 CONF = cfg.CONF
@@ -64,6 +67,8 @@ class TimingScheduler(driver.Scheduler):
         self.options = scheduler_options.SchedulerOptions()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.notifier = rpc.get_notifier('scheduler')
+        #pdb.set_trace()
+
 
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
@@ -86,12 +91,16 @@ class TimingScheduler(driver.Scheduler):
         #           {'num_instances': len(instance_uuids),
         #            'instance_uuids': instance_uuids})
         # LOG.debug(_("Request Spec: %s") % request_spec)
-
+        # pdb.set_trace()
+        # LOG.debug(_("Request Spec: %s") % request_spec)
+        LOG.debug(_("Filter_properties: %s") % filter_properties)
+        # LOG.debug("..........................................................................................")
+        # LOG.debug(_("Type of Filter_properties: %s") % type(filter_properties))
         ctx = context.to_dict()
-        with open('/home/kahn/context.txt', 'w') as outfile:
+        with open('/home/ngtrieuvi92/context.txt', 'w') as outfile:
             outfile.write(str(ctx))
 
-        with open('/home/kahn/request_spec.txt', 'w') as outfile:
+        with open('/home/ngtrieuvi92/request_spec.txt', 'w') as outfile:
             outfile.write(str(request_spec))
 
         others = {
@@ -103,10 +112,20 @@ class TimingScheduler(driver.Scheduler):
             'legacy_bdm_in_spec': legacy_bdm_in_spec
         }
 
-        with open('/home/kahn/others_params.txt', 'w') as outfile:
+        with open('/home/ngtrieuvi92/others_params.txt', 'w') as outfile:
             outfile.write(str(others))
 
-        self._add_cron_tab()
+        scheduler_hints =filter_properties.get('scheduler_hints')
+        start_time  = datetime.datetime.now()
+        LOG.debug(_("Now: %s") % start_time)
+        if scheduler_hints:
+            start_time_str = scheduler_hints['start_time'] #format Y-m-d:H-M-S
+            LOG.debug(_("Scheduler Time string : %s") % start_time_str)
+            if start_time_str:
+                start_time = datetime.datetime.strptime(start_time_str,"%Y-%m-%d:%H:%M:%S")
+                LOG.debug(_("Scheduler Time At: %s") % start_time)
+
+        self._add_cron_tab(start_time)
 
         # weighed_hosts = self._schedule(context, request_spec,
         #                                filter_properties, instance_uuids)
@@ -154,15 +173,14 @@ class TimingScheduler(driver.Scheduler):
         #
         # self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
-    def _add_cron_tab(self):
-        now = datetime.datetime.now()
-        scheduled_time = now + datetime.timedelta(hours=0, minutes=2, seconds=0)
+    def _add_cron_tab(self,scheduled_time):
+        LOG.debug(_("Writing to cront tab.....................") )
+        LOG.debug(_("Add new cront tab %s") % scheduled_time )
         cron = CronTab()
-
-        cmd = '/home/kahn/Openstack/nova/.venv/bin/python ' + \
-              '/home/kahn/Openstack/nova/.venv/local/lib/python2.7/site-packages/nova' + \
+        cmd = '/home/ngtrieuvi92/zz/openstack/nova/.venv/bin/python ' + \
+              '/home/ngtrieuvi92/zz/openstack/nova/.venv/local/lib/python2.7/site-packages/nova' + \
               '/scheduler/timing_scheduler/run_scheduled_instance.py --config-file ' + \
-              '/home/kahn/Openstack/nova/etc/nova/nova.conf'
+              '/home/ngtrieuvi92/zz/openstack/nova/etc/nova/nova.conf'
 
         job = cron.new(command=cmd)
         job.hour.on(scheduled_time.hour)
@@ -179,6 +197,7 @@ class TimingScheduler(driver.Scheduler):
                                          injected_files, admin_password,
                                          is_first_time,
                                          legacy_bdm_in_spec):
+        # pdb.set_trace()
 
         payload = dict(request_spec=request_spec)
         self.notifier.info(context, 'scheduler.run_instance.start', payload)
