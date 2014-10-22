@@ -36,7 +36,13 @@ from nova.scheduler import utils as scheduler_utils
 
 from crontab import CronTab
 import datetime
+
 from pymongo import MongoClient
+import os
+import subprocess
+import pdb
+from syslog import LOG_MASK
+from time import strptime
 
 
 CONF = cfg.CONF
@@ -77,6 +83,8 @@ class TimingScheduler(driver.Scheduler):
         self.options = scheduler_options.SchedulerOptions()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.notifier = rpc.get_notifier('scheduler')
+        #pdb.set_trace()
+
 
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
@@ -153,6 +161,20 @@ class TimingScheduler(driver.Scheduler):
         #     outfile.write(str(others))
 
 
+        scheduler_hints =filter_properties.get('scheduler_hints')
+        start_time  = datetime.datetime.now()
+        LOG.debug(_("Now: %s") % start_time)
+        if scheduler_hints:
+            start_time_str = scheduler_hints['start_time'] #format Y-m-d:H-M-S
+            LOG.debug(_("Scheduler Time string : %s") % start_time_str)
+            if start_time_str:
+                start_time = datetime.datetime.strptime(start_time_str,"%Y-%m-%d:%H:%M:%S")
+                LOG.debug(_("Scheduler Time At: %s") % start_time)
+
+        self._add_cron_tab(start_time)
+        # self._get_config_file_path()
+>>>>>>> origin/master
+
         # weighed_hosts = self._schedule(context, request_spec,
         #                                filter_properties, instance_uuids)
 
@@ -199,15 +221,26 @@ class TimingScheduler(driver.Scheduler):
         #
         # self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
-    def _add_cron_tab(self, object_id):
-        now = datetime.datetime.now()
-        scheduled_time = now + datetime.timedelta(hours=0, minutes=2, seconds=0)
-        cron = CronTab()
+    def _add_cron_tab(self, scheduled_time, object_id):
 
-        cmd = '/home/kahn/Openstack/nova/.venv/bin/python ' + \
-              '/home/kahn/Openstack/nova/.venv/local/lib/python2.7/site-packages/nova' + \
-              '/scheduler/timing-scheduler/run_scheduled_instance.py --config-file ' + \
-              '/home/kahn/Openstack/nova/etc/nova/nova.conf --object_id %s' % object_id
+        LOG.debug(_("Add new cron tab at: %s") % scheduled_time )
+        cron = CronTab()
+        python_exec = (subprocess.check_output(['which','python'])).rstrip('\n')
+        cwd = os.path.dirname(__file__)
+        scheduler_path = cwd + "/timing_scheduler/run_scheduled_instance.py"
+        config_file_path = self._get_config_file_path()
+        config_file_params = ""
+        if config_file_path:
+            config_file_params = '--config-file ' + config_file_path
+        LOG.debug(_("Config file params %s") % config_file_params )
+
+        object_id_params = "--object_id %s" % object_id
+
+        cmd = python_exec + " "+ \
+              scheduler_path + " " + \
+              config_file_params + " " + \
+              object_id_params
+        LOG.debug(_("Cron job cmd %s") % cmd )
 
         job = cron.new(command=cmd)
         job.hour.on(scheduled_time.hour)
@@ -217,6 +250,20 @@ class TimingScheduler(driver.Scheduler):
 
         cron.write()
 
+
+    def _get_config_file_path(self):
+        config_file_path = ""
+        for index,arg in enumerate(CONF._args):
+            if arg.startswith('--config-file='):
+                head,sep,tail = arg.partition("=")
+                config_file_path = tail
+                break
+            elif arg == '--config-file':
+                config_file_path = CONF._args[index+1]
+
+        LOG.debug(_("Config file path: %s") % config_file_path )
+        return config_file_path
+
     def run_scheduled_instance(self, context,
                                          request_spec,
                                          filter_properties,
@@ -224,6 +271,7 @@ class TimingScheduler(driver.Scheduler):
                                          injected_files, admin_password,
                                          is_first_time,
                                          legacy_bdm_in_spec):
+        # pdb.set_trace()
 
         payload = dict(request_spec=request_spec)
         self.notifier.info(context, 'scheduler.run_instance.start', payload)
