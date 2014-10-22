@@ -10,7 +10,7 @@ from nova import config
 CONF = cfg.CONF
 CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 
-with open('/home/kahn/log.txt', 'w') as outfile:
+with open('/home/ngtrieuvi92/log.txt', 'w') as outfile:
     outfile.write('Start timing scheduler')
 
 config.parse_args(sys.argv)
@@ -26,23 +26,23 @@ if len(sys.argv) >= 2:
     #
     # tab.write()
 
-    context_dict = eval(open('/home/kahn/context.txt', 'r').read())
+    context_dict = eval(open('/home/ngtrieuvi92/context.txt', 'r').read())
     if context_dict is None:
-        with open('/home/kahn/error.txt', 'w') as outfile:
+        with open('/home/ngtrieuvi92/error.txt', 'w') as outfile:
             outfile.write('Can not open context file')
             exit(0)
 
     context = RequestContext.from_dict(context_dict)
 
-    request_spec = eval(open('/home/kahn/request_spec.txt', 'r').read())
+    request_spec = eval(open('/home/ngtrieuvi92/request_spec.txt', 'r').read())
     if request_spec is None:
-        with open('/home/kahn/error.txt', 'w') as outfile:
+        with open('/home/ngtrieuvi92/error.txt', 'w') as outfile:
             outfile.write('Can not open request_spec file')
             exit(0)
 
-    others_params_dict = eval(open('/home/kahn/others_params.txt', 'r').read())
+    others_params_dict = eval(open('/home/ngtrieuvi92/others_params.txt', 'r').read())
     if others_params_dict is None:
-        with open('/home/kahn/error.txt', 'w') as outfile:
+        with open('/home/ngtrieuvi92/error.txt', 'w') as outfile:
             outfile.write('Can not open others_params file')
             exit(0)
 

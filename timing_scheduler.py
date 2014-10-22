@@ -180,9 +180,9 @@ class TimingScheduler(driver.Scheduler):
         cron = CronTab()
         python_exec = (subprocess.check_output(['which','python'])).rstrip('\n')
         cwd = os.path.dirname(__file__)
-        scheduler_path = cwd + "/timing_scheduler/run_scheduled_instance.py"
+        scheduler_path = cwd + "/timing-scheduler/run_scheduled_instance.py"
         config_file_path = self._get_config_file_path()
-        config_file_params = ""
+        config_file_params = " --config-file /etc/nova/nova.conf"
         if config_file_path:
             config_file_params = '--config-file ' + config_file_path
         LOG.debug(_("Config file params %s") % config_file_params )
