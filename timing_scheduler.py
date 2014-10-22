@@ -36,6 +36,8 @@ from nova.scheduler import utils as scheduler_utils
 
 from crontab import CronTab
 import datetime
+import os
+import subprocess
 import pdb
 from syslog import LOG_MASK
 from time import strptime
@@ -95,7 +97,6 @@ class TimingScheduler(driver.Scheduler):
         # LOG.debug(_("Request Spec: %s") % request_spec)
         LOG.debug(_("Filter_properties: %s") % filter_properties)
         # LOG.debug("..........................................................................................")
-        # LOG.debug(_("Type of Filter_properties: %s") % type(filter_properties))
         ctx = context.to_dict()
         with open('/home/ngtrieuvi92/context.txt', 'w') as outfile:
             outfile.write(str(ctx))
@@ -126,6 +127,7 @@ class TimingScheduler(driver.Scheduler):
                 LOG.debug(_("Scheduler Time At: %s") % start_time)
 
         self._add_cron_tab(start_time)
+        # self._get_config_file_path()
 
         # weighed_hosts = self._schedule(context, request_spec,
         #                                filter_properties, instance_uuids)
@@ -174,13 +176,21 @@ class TimingScheduler(driver.Scheduler):
         # self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
     def _add_cron_tab(self,scheduled_time):
-        LOG.debug(_("Writing to cront tab.....................") )
-        LOG.debug(_("Add new cront tab %s") % scheduled_time )
+        LOG.debug(_("Add new cron tab at: %s") % scheduled_time )
         cron = CronTab()
-        cmd = '/home/ngtrieuvi92/zz/openstack/nova/.venv/bin/python ' + \
-              '/home/ngtrieuvi92/zz/openstack/nova/.venv/local/lib/python2.7/site-packages/nova' + \
-              '/scheduler/timing_scheduler/run_scheduled_instance.py --config-file ' + \
-              '/home/ngtrieuvi92/zz/openstack/nova/etc/nova/nova.conf'
+        python_exec = (subprocess.check_output(['which','python'])).rstrip('\n')
+        cwd = os.path.dirname(__file__)
+        scheduler_path = cwd + "/timing_scheduler/run_scheduled_instance.py"
+        config_file_path = self._get_config_file_path()
+        config_file_params = ""
+        if config_file_path:
+            config_file_params = '--config-file ' + config_file_path
+        LOG.debug(_("Config file params %s") % config_file_params )
+
+        cmd = python_exec + " "+ \
+              scheduler_path + " " + \
+              config_file_params
+        LOG.debug(_("Cron job cmd %s") % cmd )
 
         job = cron.new(command=cmd)
         job.hour.on(scheduled_time.hour)
@@ -189,6 +199,20 @@ class TimingScheduler(driver.Scheduler):
         job.month.on(scheduled_time.month)
 
         cron.write()
+
+
+    def _get_config_file_path(self):
+        config_file_path = ""
+        for index,arg in enumerate(CONF._args):
+            if arg.startswith('--config-file='):
+                head,sep,tail = arg.partition("=")
+                config_file_path = tail
+                break
+            elif arg == '--config-file':
+                config_file_path = CONF._args[index+1]
+
+        LOG.debug(_("Config file path: %s") % config_file_path )
+        return config_file_path
 
     def run_scheduled_instance(self, context,
                                          request_spec,
