@@ -36,6 +36,8 @@ from nova.scheduler import utils as scheduler_utils
 
 from crontab import CronTab
 import datetime
+
+from pymongo import MongoClient
 import os
 import subprocess
 import pdb
@@ -60,6 +62,18 @@ filter_scheduler_opts = [
 ]
 
 CONF.register_opts(filter_scheduler_opts)
+
+db_group = cfg.OptGroup(name='database',
+                        title='Databse Configuration Group')
+
+db_opts = [
+    cfg.StrOpt('mongo_connection', default='mongodb://nova:openstack@localhost/nova'),
+    cfg.StrOpt('mongo_database', default='nova'),
+    cfg.StrOpt('mongo_collection', default='pendinginstance')
+]
+
+CONF.register_group(db_group)
+CONF.register_opts(db_opts, db_group)
 
 
 class TimingScheduler(driver.Scheduler):
@@ -93,18 +107,16 @@ class TimingScheduler(driver.Scheduler):
         #           {'num_instances': len(instance_uuids),
         #            'instance_uuids': instance_uuids})
         # LOG.debug(_("Request Spec: %s") % request_spec)
-        # pdb.set_trace()
-        # LOG.debug(_("Request Spec: %s") % request_spec)
-        LOG.debug(_("Filter_properties: %s") % filter_properties)
-        # LOG.debug("..........................................................................................")
-        ctx = context.to_dict()
-        with open('/home/ngtrieuvi92/context.txt', 'w') as outfile:
-            outfile.write(str(ctx))
 
-        with open('/home/ngtrieuvi92/request_spec.txt', 'w') as outfile:
-            outfile.write(str(request_spec))
+        client = MongoClient(CONF.database.mongo_connection)
+        db = client[CONF.database.mongo_database]
+        collection = db[CONF.database.mongo_collection]
 
-        others = {
+        print CONF.database.mongo_connection
+        print CONF.database.mongo_database
+        print CONF.database.mongo_collection
+
+        other_params = {
             'filter_properties': filter_properties,
             'requested_networks': requested_networks,
             'injected_files': injected_files,
@@ -113,8 +125,41 @@ class TimingScheduler(driver.Scheduler):
             'legacy_bdm_in_spec': legacy_bdm_in_spec
         }
 
-        with open('/home/ngtrieuvi92/others_params.txt', 'w') as outfile:
-            outfile.write(str(others))
+        data = {}
+        data['instance_uuids'] = request_spec['instance_uuids']
+        data['context'] = str(context.to_dict())
+        data['request_spec'] = str(request_spec)
+        data['other_params'] = str(other_params)
+        data['pending'] = True
+
+        # json_data = jsonpickle.encode(data)
+
+        id_object = collection.insert(data)
+        self._add_cron_tab(id_object.__str__())
+        # print id_object.__str__()
+
+        # return
+
+
+        # ctx = context.to_dict()
+        # with open('/home/kahn/context.txt', 'w') as outfile:
+        #     outfile.write(str(ctx))
+        #
+        # with open('/home/kahn/request_spec.txt', 'w') as outfile:
+        #     outfile.write(str(request_spec))
+        #
+        # others = {
+        #     'filter_properties': filter_properties,
+        #     'requested_networks': requested_networks,
+        #     'injected_files': injected_files,
+        #     'admin_password': admin_password,
+        #     'is_first_time': is_first_time,
+        #     'legacy_bdm_in_spec': legacy_bdm_in_spec
+        # }
+        #
+        # with open('/home/kahn/others_params.txt', 'w') as outfile:
+        #     outfile.write(str(others))
+
 
         scheduler_hints =filter_properties.get('scheduler_hints')
         start_time  = datetime.datetime.now()
@@ -128,6 +173,7 @@ class TimingScheduler(driver.Scheduler):
 
         self._add_cron_tab(start_time)
         # self._get_config_file_path()
+>>>>>>> origin/master
 
         # weighed_hosts = self._schedule(context, request_spec,
         #                                filter_properties, instance_uuids)
@@ -175,7 +221,8 @@ class TimingScheduler(driver.Scheduler):
         #
         # self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
-    def _add_cron_tab(self,scheduled_time):
+    def _add_cron_tab(self, scheduled_time, object_id):
+
         LOG.debug(_("Add new cron tab at: %s") % scheduled_time )
         cron = CronTab()
         python_exec = (subprocess.check_output(['which','python'])).rstrip('\n')
@@ -187,9 +234,12 @@ class TimingScheduler(driver.Scheduler):
             config_file_params = '--config-file ' + config_file_path
         LOG.debug(_("Config file params %s") % config_file_params )
 
+        object_id_params = "--object_id %s" % object_id
+
         cmd = python_exec + " "+ \
               scheduler_path + " " + \
-              config_file_params
+              config_file_params + " " + \
+              object_id_params
         LOG.debug(_("Cron job cmd %s") % cmd )
 
         job = cron.new(command=cmd)
