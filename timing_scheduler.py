@@ -135,7 +135,7 @@ class TimingScheduler(driver.Scheduler):
         # json_data = jsonpickle.encode(data)
 
         id_object = collection.insert(data)
-        self._add_cron_tab(id_object.__str__())
+        # self._add_cron_tab(id_object.__str__())
         # print id_object.__str__()
 
         # return
@@ -171,9 +171,8 @@ class TimingScheduler(driver.Scheduler):
                 start_time = datetime.datetime.strptime(start_time_str,"%Y-%m-%d:%H:%M:%S")
                 LOG.debug(_("Scheduler Time At: %s") % start_time)
 
-        self._add_cron_tab(start_time)
+        self._add_cron_tab(start_time, id_object.__str__())
         # self._get_config_file_path()
->>>>>>> origin/master
 
         # weighed_hosts = self._schedule(context, request_spec,
         #                                filter_properties, instance_uuids)
