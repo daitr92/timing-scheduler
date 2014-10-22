@@ -36,6 +36,7 @@ from nova.scheduler import utils as scheduler_utils
 
 from crontab import CronTab
 import datetime
+from pymongo import MongoClient
 
 
 CONF = cfg.CONF
@@ -55,6 +56,18 @@ filter_scheduler_opts = [
 ]
 
 CONF.register_opts(filter_scheduler_opts)
+
+db_group = cfg.OptGroup(name='database',
+                        title='Databse Configuration Group')
+
+db_opts = [
+    cfg.StrOpt('mongo_connection', default='mongodb://nova:openstack@localhost/nova'),
+    cfg.StrOpt('mongo_database', default='nova'),
+    cfg.StrOpt('mongo_collection', default='pendinginstance')
+]
+
+CONF.register_group(db_group)
+CONF.register_opts(db_opts, db_group)
 
 
 class TimingScheduler(driver.Scheduler):
@@ -87,14 +100,15 @@ class TimingScheduler(driver.Scheduler):
         #            'instance_uuids': instance_uuids})
         # LOG.debug(_("Request Spec: %s") % request_spec)
 
-        ctx = context.to_dict()
-        with open('/home/kahn/context.txt', 'w') as outfile:
-            outfile.write(str(ctx))
+        client = MongoClient(CONF.database.mongo_connection)
+        db = client[CONF.database.mongo_database]
+        collection = db[CONF.database.mongo_collection]
 
-        with open('/home/kahn/request_spec.txt', 'w') as outfile:
-            outfile.write(str(request_spec))
+        print CONF.database.mongo_connection
+        print CONF.database.mongo_database
+        print CONF.database.mongo_collection
 
-        others = {
+        other_params = {
             'filter_properties': filter_properties,
             'requested_networks': requested_networks,
             'injected_files': injected_files,
@@ -103,10 +117,41 @@ class TimingScheduler(driver.Scheduler):
             'legacy_bdm_in_spec': legacy_bdm_in_spec
         }
 
-        with open('/home/kahn/others_params.txt', 'w') as outfile:
-            outfile.write(str(others))
+        data = {}
+        data['instance_uuids'] = request_spec['instance_uuids']
+        data['context'] = str(context.to_dict())
+        data['request_spec'] = str(request_spec)
+        data['other_params'] = str(other_params)
+        data['pending'] = True
 
-        self._add_cron_tab()
+        # json_data = jsonpickle.encode(data)
+
+        id_object = collection.insert(data)
+        self._add_cron_tab(id_object.__str__())
+        # print id_object.__str__()
+
+        # return
+
+
+        # ctx = context.to_dict()
+        # with open('/home/kahn/context.txt', 'w') as outfile:
+        #     outfile.write(str(ctx))
+        #
+        # with open('/home/kahn/request_spec.txt', 'w') as outfile:
+        #     outfile.write(str(request_spec))
+        #
+        # others = {
+        #     'filter_properties': filter_properties,
+        #     'requested_networks': requested_networks,
+        #     'injected_files': injected_files,
+        #     'admin_password': admin_password,
+        #     'is_first_time': is_first_time,
+        #     'legacy_bdm_in_spec': legacy_bdm_in_spec
+        # }
+        #
+        # with open('/home/kahn/others_params.txt', 'w') as outfile:
+        #     outfile.write(str(others))
+
 
         # weighed_hosts = self._schedule(context, request_spec,
         #                                filter_properties, instance_uuids)
@@ -154,15 +199,15 @@ class TimingScheduler(driver.Scheduler):
         #
         # self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
-    def _add_cron_tab(self):
+    def _add_cron_tab(self, object_id):
         now = datetime.datetime.now()
         scheduled_time = now + datetime.timedelta(hours=0, minutes=2, seconds=0)
         cron = CronTab()
 
         cmd = '/home/kahn/Openstack/nova/.venv/bin/python ' + \
               '/home/kahn/Openstack/nova/.venv/local/lib/python2.7/site-packages/nova' + \
-              '/scheduler/timing_scheduler/run_scheduled_instance.py --config-file ' + \
-              '/home/kahn/Openstack/nova/etc/nova/nova.conf'
+              '/scheduler/timing-scheduler/run_scheduled_instance.py --config-file ' + \
+              '/home/kahn/Openstack/nova/etc/nova/nova.conf --object_id %s' % object_id
 
         job = cron.new(command=cmd)
         job.hour.on(scheduled_time.hour)
