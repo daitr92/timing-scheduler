@@ -34,6 +34,10 @@ from nova.scheduler import driver
 from nova.scheduler import scheduler_options
 from nova.scheduler import utils as scheduler_utils
 
+from novaclient.v1_1 import client
+from novaclient.extension import Extension
+from novaclient.v1_1.contrib import  scheduler_partner
+
 from crontab import CronTab
 import datetime
 
@@ -96,7 +100,7 @@ class TimingScheduler(driver.Scheduler):
 
         Returns a list of the instances created.
         """
-
+        print 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 
         # payload = dict(request_spec=request_spec)
         # self.notifier.info(context, 'scheduler.run_instance.start', payload)
@@ -108,13 +112,13 @@ class TimingScheduler(driver.Scheduler):
         #            'instance_uuids': instance_uuids})
         # LOG.debug(_("Request Spec: %s") % request_spec)
 
-        client = MongoClient(CONF.database.mongo_connection)
-        db = client[CONF.database.mongo_database]
-        collection = db[CONF.database.mongo_collection]
+        # client = MongoClient(CONF.database.mongo_connection)
+        # db = client[CONF.database.mongo_database]
+        # collection = db[CONF.database.mongo_collection]
 
-        print CONF.database.mongo_connection
-        print CONF.database.mongo_database
-        print CONF.database.mongo_collection
+        # print CONF.database.mongo_connection
+        # print CONF.database.mongo_database
+        # print CONF.database.mongo_collection
 
         other_params = {
             'filter_properties': filter_properties,
@@ -127,98 +131,32 @@ class TimingScheduler(driver.Scheduler):
 
         data = {}
         data['instance_uuids'] = request_spec['instance_uuids']
-        data['context'] = str(context.to_dict())
+        # data['context'] = str(context.to_dict())
         data['request_spec'] = str(request_spec)
         data['other_params'] = str(other_params)
         data['pending'] = True
 
-        # json_data = jsonpickle.encode(data)
+        res_client = client.Client('admin', '8954', 'demo', 'http://localhost:35357/v2.0',
+                                   service_type='compute', extensions=[
+                                        Extension('scheduler_partner', scheduler_partner)
+                                    ])
 
-        id_object = collection.insert(data)
-        # self._add_cron_tab(id_object.__str__())
-        # print id_object.__str__()
+        result = res_client.scheduler_partner.create(data)
+        print(result.success)
 
-        # return
-
-
-        # ctx = context.to_dict()
-        # with open('/home/kahn/context.txt', 'w') as outfile:
-        #     outfile.write(str(ctx))
+        # id_object = collection.insert(data)
         #
-        # with open('/home/kahn/request_spec.txt', 'w') as outfile:
-        #     outfile.write(str(request_spec))
+        # scheduler_hints = filter_properties.get('scheduler_hints')
+        # start_time = datetime.datetime.now()
+        # LOG.debug(_("Now: %s") % start_time)
+        # if scheduler_hints:
+        #     start_time_str = scheduler_hints['start_time'] #format Y-m-d:H-M-S
+        #     LOG.debug(_("Scheduler Time string : %s") % start_time_str)
+        #     if start_time_str:
+        #         start_time = datetime.datetime.strptime(start_time_str,"%Y-%m-%d:%H:%M:%S")
+        #         LOG.debug(_("Scheduler Time At: %s") % start_time)
         #
-        # others = {
-        #     'filter_properties': filter_properties,
-        #     'requested_networks': requested_networks,
-        #     'injected_files': injected_files,
-        #     'admin_password': admin_password,
-        #     'is_first_time': is_first_time,
-        #     'legacy_bdm_in_spec': legacy_bdm_in_spec
-        # }
-        #
-        # with open('/home/kahn/others_params.txt', 'w') as outfile:
-        #     outfile.write(str(others))
-
-
-        scheduler_hints =filter_properties.get('scheduler_hints')
-        start_time  = datetime.datetime.now()
-        LOG.debug(_("Now: %s") % start_time)
-        if scheduler_hints:
-            start_time_str = scheduler_hints['start_time'] #format Y-m-d:H-M-S
-            LOG.debug(_("Scheduler Time string : %s") % start_time_str)
-            if start_time_str:
-                start_time = datetime.datetime.strptime(start_time_str,"%Y-%m-%d:%H:%M:%S")
-                LOG.debug(_("Scheduler Time At: %s") % start_time)
-
-        self._add_cron_tab(start_time, id_object.__str__())
-        # self._get_config_file_path()
-
-        # weighed_hosts = self._schedule(context, request_spec,
-        #                                filter_properties, instance_uuids)
-
-        # NOTE: Pop instance_uuids as individual creates do not need the
-        # set of uuids. Do not pop before here as the upper exception
-        # handler fo NoValidHost needs the uuid to set error state
-        # instance_uuids = request_spec.pop('instance_uuids')
-
-        # NOTE(comstud): Make sure we do not pass this through.  It
-        # contains an instance of RpcContext that cannot be serialized.
-        # filter_properties.pop('context', None)
-
-        # for num, instance_uuid in enumerate(instance_uuids):
-        #     request_spec['instance_properties']['launch_index'] = num
-        #
-        #     try:
-        #         try:
-        #             weighed_host = weighed_hosts.pop(0)
-        #             LOG.info(_("Choosing host %(weighed_host)s "
-        #                         "for instance %(instance_uuid)s"),
-        #                       {'weighed_host': weighed_host,
-        #                        'instance_uuid': instance_uuid})
-        #         except IndexError:
-        #             raise exception.NoValidHost(reason="")
-
-                # self._provision_resource(context, weighed_host,
-                #                          request_spec,
-                #                          filter_properties,
-                #                          requested_networks,
-                #                          injected_files, admin_password,
-                #                          is_first_time,
-                #                          instance_uuid=instance_uuid,
-                #                          legacy_bdm_in_spec=legacy_bdm_in_spec)
-            # except Exception as ex:
-                # NOTE(vish): we don't reraise the exception here to make sure
-                #             that all instances in the request get set to
-                #             error properly
-                # driver.handle_schedule_error(context, ex, instance_uuid,
-                #                              request_spec)
-            # scrub retry host list in case we're scheduling multiple
-            # instances:
-        #     retry = filter_properties.get('retry', {})
-        #     retry['hosts'] = []
-        #
-        # self.notifier.info(context, 'scheduler.run_instance.end', payload)
+        # self._add_cron_tab(start_time, id_object.__str__())
 
     def _add_cron_tab(self, scheduled_time, object_id):
 
