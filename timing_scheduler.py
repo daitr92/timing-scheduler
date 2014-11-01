@@ -189,6 +189,19 @@ class TimingScheduler(driver.Scheduler):
 
 
     def _get_config_file_path(self):
+        config_file_path = self._get_first_default_config_file()
+        config_file_path = self._get_config_file_from_arg()
+        return config_file_path
+
+    def _get_first_default_config_file(selfs):
+        config_file_path = ""
+        for default_config_file in CONF.default_config_files:
+            if os.path.isfile(default_config_file):
+                config_file_path = default_config_file
+                break
+        return  config_file_path;
+
+    def _get_config_file_from_arg(self):
         config_file_path = ""
         for index,arg in enumerate(CONF._args):
             if arg.startswith('--config-file='):
