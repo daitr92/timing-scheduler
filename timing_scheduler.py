@@ -105,7 +105,6 @@ class TimingScheduler(driver.Scheduler):
         print 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 
         scheduler_hints = filter_properties.get('scheduler_hints')
-        partner_shortname = scheduler_hints['partner']
         # partner = DbAPI.partners_get_by_shortname(context, partner_shortname)
         partners = DbAPI.partners_get_all(context)
 
@@ -114,7 +113,7 @@ class TimingScheduler(driver.Scheduler):
             return
 
         for partner in partners:
-            print "Trying to send request to %s" % partner_shortname
+            print "Trying to send request to %s" % partner.shortname
             partner_client = client.Client(partner.username, partner.password, 'demo', partner.auth_url,
                                    service_type='compute', extensions=[
                                         Extension('scheduler_partner', scheduler_partner)
@@ -126,11 +125,11 @@ class TimingScheduler(driver.Scheduler):
 
             result = partner_client.scheduler_partner.create(data)
             if not result or u'success' not in result:
-                print "%s is now offline!" % partner_shortname
+                print "%s is now offline!" % partner.shortname
                 continue
 
             if result[u'success'] == 1:
-                DbAPI.partners_update(context, partner_shortname, {
+                DbAPI.partners_update(context, partner.shortname, {
                     'requested': result['points']
                 })
 
@@ -264,7 +263,6 @@ class TimingScheduler(driver.Scheduler):
         print 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBbb'
 
         scheduler_hints = filter_properties.get('scheduler_hints')
-        partner_shortname = scheduler_hints['partner']
         # partner = DbAPI.partners_get_by_shortname(context, partner_shortname)
         partners = DbAPI.partners_get_all(context)
 
@@ -273,7 +271,7 @@ class TimingScheduler(driver.Scheduler):
             return
 
         for partner in partners:
-            print "Trying to send request to %s" % partner_shortname
+            print "Trying to send request to %s" % partner.shortname
             partner_client = client.Client(partner.username, partner.password, 'demo', partner.auth_url,
                                    service_type='compute', extensions=[
                                         Extension('scheduler_partner', scheduler_partner)
@@ -285,11 +283,11 @@ class TimingScheduler(driver.Scheduler):
 
             result = partner_client.scheduler_partner.create(data)
             if not result or u'success' not in result:
-                print "%s is now offline!" % partner_shortname
+                print "%s is now offline!" % partner.shortname
                 continue
 
             if result[u'success'] == 1:
-                DbAPI.partners_update(context, partner_shortname, {
+                DbAPI.partners_update(context, partner.shortname, {
                     'requested': result['points']
                 })
 
@@ -360,7 +358,6 @@ class TimingScheduler(driver.Scheduler):
         print 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC'
 
         scheduler_hints = filter_properties.get('scheduler_hints')
-        partner_shortname = scheduler_hints['partner']
         # partner = DbAPI.partners_get_by_shortname(context, partner_shortname)
         partners = DbAPI.partners_get_all(context)
 
@@ -369,7 +366,7 @@ class TimingScheduler(driver.Scheduler):
             return
 
         for partner in partners:
-            print "Trying to send request to %s" % partner_shortname
+            print "Trying to send request to %s" % partner.shortname
             partner_client = client.Client(partner.username, partner.password, 'demo', partner.auth_url,
                                    service_type='compute', extensions=[
                                         Extension('scheduler_partner', scheduler_partner)
@@ -381,11 +378,11 @@ class TimingScheduler(driver.Scheduler):
 
             result = partner_client.scheduler_partner.create(data)
             if not result or u'success' not in result:
-                print "%s is now offline!" % partner_shortname
+                print "%s is now offline!" % partner.shortname
                 continue
 
             if result[u'success'] == 1:
-                DbAPI.partners_update(context, partner_shortname, {
+                DbAPI.partners_update(context, partner.shortname, {
                     'requested': result['points']
                 })
 
