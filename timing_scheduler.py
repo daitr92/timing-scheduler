@@ -132,7 +132,7 @@ class TimingScheduler(driver.Scheduler):
                 DbAPI.partners_update(context, partner['shortname'], {
                     'requested': result['points']
                 })
-
+                print result
                 break
 
             print result
@@ -290,7 +290,7 @@ class TimingScheduler(driver.Scheduler):
                 DbAPI.partners_update(context, partner['shortname'], {
                     'requested': result['points']
                 })
-
+                print result
                 break
 
             print result
@@ -385,7 +385,7 @@ class TimingScheduler(driver.Scheduler):
                 DbAPI.partners_update(context, partner['shortname'], {
                     'requested': result['points']
                 })
-
+                print result
                 break
 
             print result
