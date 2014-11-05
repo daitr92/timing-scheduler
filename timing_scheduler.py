@@ -42,8 +42,10 @@ from crontab import CronTab
 import datetime
 
 from pymongo import MongoClient
+from pprint import pprint
 import os
 import subprocess
+import nova.db.api as DbAPI
 import pdb
 from syslog import LOG_MASK
 from time import strptime
@@ -89,7 +91,6 @@ class TimingScheduler(driver.Scheduler):
         self.notifier = rpc.get_notifier('scheduler')
         #pdb.set_trace()
 
-
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
@@ -101,6 +102,43 @@ class TimingScheduler(driver.Scheduler):
         Returns a list of the instances created.
         """
         print 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+
+        scheduler_hints = filter_properties.get('scheduler_hints')
+        partner_shortname = scheduler_hints['partner']
+        # partner = DbAPI.partners_get_by_shortname(context, partner_shortname)
+        partners = DbAPI.partners_get_all(context)
+
+        if not partners:
+            print "There is no partner!"
+            return
+
+        for partner in partners:
+            print "Trying to send request to %s" % partner.shortname
+            partner_client = client.Client(partner.username, partner.password, 'demo', partner.auth_url,
+                                   service_type='compute', extensions=[
+                                        Extension('scheduler_partner', scheduler_partner)
+                                    ])
+
+            data = {}
+            data['flavor'] = request_spec['instance_type']['flavorid']
+            data['num_instances'] = scheduler_hints['num_instances']
+
+            result = partner_client.scheduler_partner.create(data)
+            if not result or u'success' not in result:
+                print "%s is now offline!" % partner.shortname
+                continue
+
+            if result[u'success'] == 1:
+                DbAPI.partners_update(context, partner.shortname, {
+                    'requested': result['points']
+                })
+
+                break
+
+            print result
+
+        return
+
 
         # payload = dict(request_spec=request_spec)
         # self.notifier.info(context, 'scheduler.run_instance.start', payload)
