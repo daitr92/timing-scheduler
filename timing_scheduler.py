@@ -357,6 +357,43 @@ class TimingScheduler(driver.Scheduler):
 
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts and nodes."""
+        print 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC'
+
+        scheduler_hints = filter_properties.get('scheduler_hints')
+        partner_shortname = scheduler_hints['partner']
+        # partner = DbAPI.partners_get_by_shortname(context, partner_shortname)
+        partners = DbAPI.partners_get_all(context)
+
+        if not partners:
+            print "There is no partner!"
+            return
+
+        for partner in partners:
+            print "Trying to send request to %s" % partner_shortname
+            partner_client = client.Client(partner.username, partner.password, 'demo', partner.auth_url,
+                                   service_type='compute', extensions=[
+                                        Extension('scheduler_partner', scheduler_partner)
+                                    ])
+
+            data = {}
+            data['flavor'] = request_spec['instance_type']['flavorid']
+            data['num_instances'] = scheduler_hints['num_instances']
+
+            result = partner_client.scheduler_partner.create(data)
+            if not result or u'success' not in result:
+                print "%s is now offline!" % partner_shortname
+                continue
+
+            if result[u'success'] == 1:
+                DbAPI.partners_update(context, partner_shortname, {
+                    'requested': result['points']
+                })
+
+                break
+
+            print result
+
+        return
         num_instances = request_spec['num_instances']
         instance_uuids = request_spec.get('instance_uuids')
         selected_hosts = self._schedule(context, request_spec,
