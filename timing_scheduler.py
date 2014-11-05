@@ -29,7 +29,7 @@ from nova.objects import instance_group as instance_group_obj
 # from nova.openstack.common.gettextutils import _
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.pci import pci_request
+# from nova.pci import pci_request
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
@@ -383,10 +383,10 @@ class TimingScheduler(driver.Scheduler):
         os_type = request_spec['instance_properties']['os_type']
         filter_properties['project_id'] = project_id
         filter_properties['os_type'] = os_type
-        pci_requests = pci_request.get_pci_requests_from_flavor(
-            request_spec.get('instance_type') or {})
-        if pci_requests:
-            filter_properties['pci_requests'] = pci_requests
+        # pci_requests = pci_request.get_pci_requests_from_flavor(
+        #     request_spec.get('instance_type') or {})
+        # if pci_requests:
+        #     filter_properties['pci_requests'] = pci_requests
 
     def _max_attempts(self):
         max_attempts = CONF.scheduler_max_attempts
