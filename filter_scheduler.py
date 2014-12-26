@@ -81,6 +81,17 @@ class FilterScheduler(driver.Scheduler):
             reason = _('There are not enough hosts available.')
             raise exception.NoValidHost(reason=reason)
 
+        compute_nodes = self.host_api.compute_node_get_all(context)
+        total_cpu = 0
+        usable_cpu = 0
+
+        for hyp in compute_nodes:
+            total_cpu += hyp['vcpus']
+            usable_cpu = total_cpu - hyp['vcpus_used']
+
+        if len(selected_hosts) > usable_cpu:
+            selected_hosts = selected_hosts[:usable_cpu]
+
         dests = [dict(host=host.obj.host, nodename=host.obj.nodename,
                       limits=host.obj.limits) for host in selected_hosts]
 
